@@ -112,7 +112,7 @@ class SilvervaultFile extends DataObject
         if (strpos($baseUrl, '.ddev.site') !== false) {
             preg_match('/https?:\/\/([^.]+)\.ddev\.site/', $baseUrl, $matches);
             if (isset($matches[1])) {
-                return 'http://' . $matches[1] . '-web';
+                return 'http://ddev-' . $matches[1] . '-web';
             }
         }
 
