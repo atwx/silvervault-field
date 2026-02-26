@@ -1,0 +1,7 @@
+---
+Name: silvervault-field-routes
+After: 'framework/routes#coreroutes'
+---
+SilverStripe\Control\Director:
+  rules:
+    'api/silvervault//$Action': 'Atwx\SilvervaultField\Controllers\SilvervaultSearchController'

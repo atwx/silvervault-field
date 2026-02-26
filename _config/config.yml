@@ -1,0 +1,7 @@
+---
+Name: silvervault-field-admin
+After: 'framework/admin'
+---
+SilverStripe\Admin\LeftAndMain:
+  extra_requirements_javascript:
+    - 'atwx/silvervault-field:client/dist/js/bundle.js'
