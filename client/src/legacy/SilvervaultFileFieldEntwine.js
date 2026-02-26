@@ -12,8 +12,9 @@ window.jQuery.entwine('ss', ($) => {
       const cmsContent = this.closest('.cms-content').attr('id');
       const context = cmsContent ? { context: cmsContent } : {};
       const schema = this.data('schema');
+      const state = this.data('state');
       if (schema) {
-        this.data('entwine-value', schema.value);
+        this.data('entwine-value', (state && state.value) ? state.value : '');
         const Root = createRoot(this[0]);
         const ReactField = loadComponent(schema.component, context);
         this.setRoot(Root);
