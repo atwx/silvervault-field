@@ -47,9 +47,9 @@ class SilvervaultSearchController extends Controller
             return $this->jsonError('SILVERVAULT_BASE_URL not configured', 500);
         }
 
-        $resolvedUrl = SilvervaultFile::resolveSilvervaultUrl($baseUrl);
-        // Adjust the path below if your Silvervault instance uses a different search endpoint.
-        $searchUrl = rtrim($resolvedUrl, '/') . '/api/v1/MediaItem/search?' . http_build_query(['title' => $query]);
+        $publicUrl    = rtrim($baseUrl, '/');
+        $resolvedUrl  = rtrim(SilvervaultFile::resolveSilvervaultUrl($baseUrl), '/');
+        $searchUrl    = $resolvedUrl . '/api/v1/MediaItem/search?' . http_build_query(['title' => $query]);
 
         try {
             $token = Environment::getEnv('SILVERVAULT_TOKEN');
@@ -92,13 +92,20 @@ class SilvervaultSearchController extends Controller
                 $rawItems = $decoded['items'];
             }
 
-            $items = array_map(function (array $item): array {
+            $items = array_map(function (array $item) use ($resolvedUrl, $publicUrl): array {
+                $thumbnail = $item['Thumbnail'] ?? $item['thumbnail'] ?? '';
+                // The internal fetch URL (e.g. http://ddev-silvervault-web) gets embedded
+                // in asset URLs by SilverStripe's Director::absoluteURL(). Replace it
+                // with the public base URL so thumbnails load in the browser.
+                if ($resolvedUrl !== $publicUrl && $thumbnail) {
+                    $thumbnail = str_replace($resolvedUrl, $publicUrl, $thumbnail);
+                }
                 return [
                     'silvervaultId' => (string) ($item['ID'] ?? $item['Id'] ?? $item['id'] ?? ''),
                     'title'         => $item['Title'] ?? $item['title'] ?? '',
                     'description'   => $item['Description'] ?? $item['description'] ?? '',
                     'rightsinfo'    => $item['Rightsinfo'] ?? $item['rightsinfo'] ?? '',
-                    'thumbnail'     => $item['Thumbnail'] ?? $item['thumbnail'] ?? '',
+                    'thumbnail'     => $thumbnail,
                 ];
             }, array_values($rawItems));
 
