@@ -94,7 +94,7 @@ class SilvervaultSearchController extends Controller
 
             $items = array_map(function (array $item): array {
                 return [
-                    'silvervaultId' => $item['ID'] ?? $item['Id'] ?? $item['id'] ?? '',
+                    'silvervaultId' => (string) ($item['ID'] ?? $item['Id'] ?? $item['id'] ?? ''),
                     'title'         => $item['Title'] ?? $item['title'] ?? '',
                     'description'   => $item['Description'] ?? $item['description'] ?? '',
                     'rightsinfo'    => $item['Rightsinfo'] ?? $item['rightsinfo'] ?? '',
