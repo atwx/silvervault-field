@@ -1,3 +1,1 @@
-<div class="silvervault-file-field" $SchemaAttributesHtml>
-    <input $AttributesHTML />
-</div>
+<div class="silvervault-file-field" $SchemaAttributesHtml></div>

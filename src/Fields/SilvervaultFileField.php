@@ -63,9 +63,13 @@ class SilvervaultFileField extends FormField
             $silvervaultFile = SilvervaultFile::create();
         }
 
-        $silvervaultFile->SilvervaultID = (string) ($data['silvervaultId'] ?? '');
-        $silvervaultFile->Caption = $data['caption'] ?? '';
-        $silvervaultFile->AltText = $data['altText'] ?? '';
+        $silvervaultFile->SilvervaultID   = (string) ($data['silvervaultId'] ?? '');
+        $silvervaultFile->Title           = $data['title'] ?? '';
+        $silvervaultFile->Description     = $data['description'] ?? '';
+        $silvervaultFile->Rightsinfo      = $data['rightsinfo'] ?? '';
+        $silvervaultFile->ThumbnailURL    = $data['thumbnail'] ?? '';
+        $silvervaultFile->Caption         = $data['caption'] ?? '';
+        $silvervaultFile->AltText         = $data['altText'] ?? '';
         $silvervaultFile->write();
 
         $record->{$fieldName . 'ID'} = $silvervaultFile->ID;
