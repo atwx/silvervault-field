@@ -46,10 +46,10 @@ const SilvervaultFileField = ({
 
   const initialFile = parseValue(rawValue);
 
-  const [mode, setMode] = useState(initialFile ? 'selected' : 'search');
   const [selected, setSelected] = useState(initialFile);
   const [caption, setCaption] = useState(initialFile ? initialFile.caption || '' : '');
   const [altText, setAltText] = useState(initialFile ? initialFile.altText || '' : '');
+  const [popupOpen, setPopupOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [searching, setSearching] = useState(false);
@@ -58,16 +58,21 @@ const SilvervaultFileField = ({
   const debouncedSearch = useMemo(
     () =>
       debounce(async (query) => {
-        if (!query || query.length < 2) {
+        const trimmed = query ? query.trim() : '';
+        const isIdSearch = /^\d+$/.test(trimmed);
+        if (!trimmed || (!isIdSearch && trimmed.length < 2)) {
           setSearchResults([]);
           setNoResults(false);
           return;
         }
         setSearching(true);
         setNoResults(false);
+        const searchParam = isIdSearch
+          ? `id=${encodeURIComponent(trimmed)}`
+          : `q=${encodeURIComponent(query)}`;
         try {
           const res = await fetch(
-            `${searchEndpoint}?q=${encodeURIComponent(query)}`,
+            `${searchEndpoint}?${searchParam}`,
             { headers: { 'X-Requested-With': 'XMLHttpRequest' } }
           );
           const json = await res.json();
@@ -92,11 +97,11 @@ const SilvervaultFileField = ({
 
   const handleSelect = (item) => {
     const newCaption = item.caption || '';
-    const newAltText = item.altText || item.title || '';
+    const newAltText = '';
     setSelected(item);
     setCaption(newCaption);
     setAltText(newAltText);
-    setMode('selected');
+    setPopupOpen(false);
     setSearchQuery('');
     setSearchResults([]);
     setNoResults(false);
@@ -115,22 +120,25 @@ const SilvervaultFileField = ({
     onChange(buildJsonValue(selected, caption, val));
   };
 
-  const handleChange = () => {
-    setMode('search');
+  const handleOpenPopup = () => {
+    setPopupOpen(true);
+    setSearchQuery('');
+    setSearchResults([]);
+    setNoResults(false);
+  };
+
+  const handleClosePopup = () => {
+    setPopupOpen(false);
     setSearchQuery('');
     setSearchResults([]);
     setNoResults(false);
   };
 
   const handleRemove = () => {
-    // eslint-disable-next-line no-alert
-    if (window.confirm('Bild wirklich entfernen?')) {
-      setSelected(null);
-      setCaption('');
-      setAltText('');
-      setMode('search');
-      onChange('');
-    }
+    setSelected(null);
+    setCaption('');
+    setAltText('');
+    onChange('');
   };
 
   // Read-only rendering
@@ -165,149 +173,282 @@ const SilvervaultFileField = ({
     <div className="silvervault-file-field">
       <input type="hidden" name={name} id={id} value={buildJsonValue(selected, caption, altText)} readOnly />
 
-      {/* ── Search mode ── */}
-      {mode === 'search' && (
-        <div className="silvervault-file-field__search">
-          <div className="input-group mb-2">
-            <input
-              type="text"
-              className="form-control"
-              placeholder="In Silvervault suchen…"
-              value={searchQuery}
-              onChange={handleSearchChange}
-              disabled={disabled}
-            />
-          </div>
-
-          {searching && (
-            <p className="silvervault-file-field__status text-muted">
-              Suche läuft…
-            </p>
-          )}
-
-          {noResults && !searching && (
-            <p className="silvervault-file-field__no-results text-muted">
-              Keine Ergebnisse für &bdquo;{searchQuery}&ldquo;
-            </p>
-          )}
-
-          {searchResults.length > 0 && (
-            <ul className="silvervault-file-field__results list-unstyled">
-              {searchResults.map((item) => (
-                <li key={item.silvervaultId} className="silvervault-file-field__result">
-                  {item.thumbnail && (
-                    <div className="silvervault-file-field__result-thumb">
-                      <img src={item.thumbnail} alt={item.title} />
-                    </div>
-                  )}
-                  <div className="silvervault-file-field__result-info">
-                    <div className="silvervault-file-field__result-title">
-                      {item.title}
-                    </div>
-                    {item.description && (
-                      <div className="silvervault-file-field__result-description text-muted small">
-                        {item.description}
-                      </div>
-                    )}
-                    {item.rightsinfo && (
-                      <div className="silvervault-file-field__result-rights text-muted small">
-                        <em>{item.rightsinfo}</em>
-                      </div>
-                    )}
-                  </div>
-                  <div className="silvervault-file-field__result-action">
-                    <button
-                      type="button"
-                      className="btn btn-primary btn-sm"
-                      onClick={() => handleSelect(item)}
-                      disabled={disabled}
-                    >
-                      Auswählen
-                    </button>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
+      {/* ── Empty state: just a button ── */}
+      {!selected && (
+        <button
+          type="button"
+          className="btn btn-outline-secondary btn-sm"
+          onClick={handleOpenPopup}
+          disabled={disabled}
+        >
+          Auswählen
+        </button>
       )}
 
-      {/* ── Selected mode ── */}
-      {mode === 'selected' && selected && (
+      {/* ── Selected state: compact row like SilverStripe UploadField ── */}
+      {selected && (
         <div className="silvervault-file-field__selected">
-          <div className="silvervault-file-field__preview">
-            {selected.thumbnail && (
-              <div className="silvervault-file-field__preview-thumb">
-                <img src={selected.thumbnail} alt={selected.title} />
-              </div>
-            )}
-            <div className="silvervault-file-field__preview-meta">
+          {/* Row box: thumbnail | info | action buttons */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            border: '1px solid #dee2e6',
+            borderRadius: '3px',
+            gap: '12px',
+            background: '#fff',
+          }}>
+            {/* Thumbnail */}
+            <div style={{
+              width: '60px',
+              height: '60px',
+              flexShrink: 0,
+              background: '#f5f5f5',
+              overflow: 'hidden',
+              borderRadius: '2px',
+            }}>
+              {selected.thumbnail && (
+                <img
+                  src={selected.thumbnail}
+                  alt={altText || selected.title}
+                  style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                />
+              )}
+            </div>
+
+            {/* Info text */}
+            <div style={{ flex: 1, minWidth: 0 }}>
               {selected.title && (
-                <div className="silvervault-file-field__preview-title">
-                  <strong>{selected.title}</strong>
+                <div style={{ fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {selected.title}
                 </div>
               )}
               {selected.description && (
-                <div className="silvervault-file-field__preview-description text-muted small">
+                <div style={{ color: '#6c757d', fontSize: '0.875rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {selected.description}
                 </div>
               )}
-              {selected.rightsinfo && (
-                <div className="silvervault-file-field__preview-rights text-muted small">
-                  <em>{selected.rightsinfo}</em>
+              {selected.silvervaultId && (
+                <div style={{ color: '#6c757d', fontSize: '0.8rem' }}>
+                  ID: {selected.silvervaultId}
                 </div>
               )}
             </div>
+
+            {/* Action buttons */}
+            <div style={{ flexShrink: 0, display: 'flex', gap: '4px' }}>
+              <button
+                type="button"
+                className="btn btn-outline-secondary btn-sm"
+                onClick={handleOpenPopup}
+                disabled={disabled}
+                title="Ändern"
+              >
+                Ändern
+              </button>
+              <button
+                type="button"
+                className="btn btn-outline-danger btn-sm"
+                onClick={handleRemove}
+                disabled={disabled}
+                title="Entfernen"
+              >
+                Entfernen
+              </button>
+            </div>
           </div>
 
-          <div className="silvervault-file-field__overrides">
+          {/* Text fields below the row */}
+          <div className="silvervault-file-field__overrides" style={{ marginTop: '12px' }}>
             <div className="form-group">
-              <label htmlFor={`${id}_caption`} className="form-label">
+              <label htmlFor={`${id}_caption`} className="form__field-label">
                 Bildunterschrift
               </label>
-              <textarea
-                id={`${id}_caption`}
-                className="form-control"
-                value={caption}
-                onChange={handleCaptionChange}
-                rows={2}
-                disabled={disabled}
-              />
+              <div className="form__field-holder">
+                <textarea
+                  id={`${id}_caption`}
+                  className="form-control"
+                  value={caption}
+                  placeholder={selected.title || ''}
+                  onChange={handleCaptionChange}
+                  rows={2}
+                  disabled={disabled}
+                />
+              </div>
             </div>
 
-            <div className="form-group mt-2">
-              <label htmlFor={`${id}_alttext`} className="form-label">
+            <div className="form-group">
+              <label htmlFor={`${id}_alttext`} className="form__field-label">
                 Alt-Text
               </label>
+              <div className="form__field-holder">
+                <input
+                  type="text"
+                  id={`${id}_alttext`}
+                  className="form-control"
+                  value={altText}
+                  placeholder={selected.title || ''}
+                  onChange={handleAltTextChange}
+                  disabled={disabled}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Search popup/modal ── */}
+      {popupOpen && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0, left: 0, right: 0, bottom: 0,
+            backgroundColor: 'rgba(0,0,0,0.5)',
+            zIndex: 9999,
+            display: 'flex',
+            alignItems: 'flex-start',
+            justifyContent: 'center',
+            paddingTop: '60px',
+          }}
+          onClick={handleClosePopup}
+        >
+          <div
+            style={{
+              backgroundColor: '#fff',
+              borderRadius: '4px',
+              width: '640px',
+              maxWidth: '90vw',
+              maxHeight: '80vh',
+              display: 'flex',
+              flexDirection: 'column',
+              boxShadow: '0 4px 24px rgba(0,0,0,0.2)',
+              overflow: 'hidden',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div style={{ padding: '16px 20px', borderBottom: '1px solid #dee2e6', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <strong>Bild aus Silvervault auswählen</strong>
+              <button
+                type="button"
+                className="btn-close"
+                onClick={handleClosePopup}
+                aria-label="Schließen"
+              />
+            </div>
+
+            {/* Search input */}
+            <div style={{ padding: '16px 20px', borderBottom: '1px solid #dee2e6' }}>
               <input
                 type="text"
-                id={`${id}_alttext`}
                 className="form-control"
-                value={altText}
-                onChange={handleAltTextChange}
+                placeholder="In Silvervault suchen…"
+                value={searchQuery}
+                onChange={handleSearchChange}
+                // eslint-disable-next-line jsx-a11y/no-autofocus
+                autoFocus
                 disabled={disabled}
               />
             </div>
-          </div>
 
-          <div className="silvervault-file-field__actions mt-2">
-            <button
-              type="button"
-              className="btn btn-outline-secondary btn-sm"
-              onClick={handleChange}
-              disabled={disabled}
-            >
-              Ändern
-            </button>
-            {' '}
-            <button
-              type="button"
-              className="btn btn-outline-danger btn-sm"
-              onClick={handleRemove}
-              disabled={disabled}
-            >
-              Entfernen
-            </button>
+            {/* Results list */}
+            <div style={{ overflowY: 'auto', flex: 1 }}>
+              {searching && (
+                <p style={{ padding: '16px 20px', margin: 0 }} className="text-muted">
+                  Suche läuft…
+                </p>
+              )}
+              {noResults && !searching && (
+                <p style={{ padding: '16px 20px', margin: 0 }} className="text-muted">
+                  Keine Ergebnisse für „{searchQuery}"
+                </p>
+              )}
+              {!searching && searchResults.length === 0 && searchQuery.length < 2 && (
+                <p style={{ padding: '16px 20px', margin: 0 }} className="text-muted">
+                  Suchbegriff eingeben (mind. 2 Zeichen)…
+                </p>
+              )}
+              {searchResults.length > 0 && (
+                <ul className="list-unstyled" style={{ margin: 0 }}>
+                  {searchResults.map((item) => (
+                    <li
+                      key={item.silvervaultId}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        padding: '10px 20px',
+                        borderBottom: '1px solid #f0f0f0',
+                        gap: '12px',
+                      }}
+                    >
+                      {/* Small square thumbnail */}
+                      <div
+                        style={{
+                          width: '56px',
+                          height: '56px',
+                          flexShrink: 0,
+                          background: '#f5f5f5',
+                          overflow: 'hidden',
+                          borderRadius: '3px',
+                        }}
+                      >
+                        {item.thumbnail && (
+                          <img
+                            src={item.thumbnail}
+                            alt={item.title}
+                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                          />
+                        )}
+                      </div>
+
+                      {/* Info text */}
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {item.title}
+                        </div>
+                        {item.description && (
+                          <div className="text-muted small" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {item.description}
+                          </div>
+                        )}
+                        {item.rightsinfo && (
+                          <div className="text-muted small">
+                            <em>{item.rightsinfo}</em>
+                          </div>
+                        )}
+                        {item.silvervaultId && (
+                          <div className="text-muted" style={{ fontSize: '0.8rem' }}>
+                            ID: {item.silvervaultId}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Select button */}
+                      <div style={{ flexShrink: 0 }}>
+                        <button
+                          type="button"
+                          className="btn btn-primary btn-sm"
+                          onClick={() => handleSelect(item)}
+                          disabled={disabled}
+                        >
+                          Auswählen
+                        </button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div style={{ padding: '12px 20px', borderTop: '1px solid #dee2e6', textAlign: 'right' }}>
+              <button
+                type="button"
+                className="btn btn-secondary btn-sm"
+                onClick={handleClosePopup}
+              >
+                Schließen
+              </button>
+            </div>
           </div>
         </div>
       )}

@@ -60,7 +60,16 @@ class SilvervaultFile extends DataObject
                     $this->Title = $data['Title'] ?? '';
                     $this->Description = $data['Description'] ?? '';
                     $this->Rightsinfo = $data['Rightsinfo'] ?? '';
-                    $this->ThumbnailURL = $data['Thumbnail'] ?? '';
+
+                    $thumbnail = $data['Thumbnail'] ?? '';
+                    $baseUrl = Environment::getEnv('SILVERVAULT_BASE_URL');
+                    if ($baseUrl) {
+                        $internalUrl = static::resolveSilvervaultUrl($baseUrl);
+                        if ($internalUrl !== $baseUrl && $thumbnail) {
+                            $thumbnail = str_replace($internalUrl, rtrim($baseUrl, '/'), $thumbnail);
+                        }
+                    }
+                    $this->ThumbnailURL = $thumbnail;
                 }
             }
         }
@@ -153,6 +162,11 @@ class SilvervaultFile extends DataObject
     public function getEffectiveAltText(): string
     {
         return $this->AltText ?: $this->Title ?: '';
+    }
+
+    public function getEffectiveCaption(): string
+    {
+        return $this->Caption ?: $this->Title ?: '';
     }
 
     public function FitMax(int $width, int $height): ?SilvervaultScaledImage

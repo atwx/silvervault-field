@@ -36,55 +36,43 @@ class SilvervaultSearchController extends Controller
             return $this->jsonError('Unauthorized', 401);
         }
 
-        $query = trim((string) $request->getVar('q'));
-
-        if (strlen($query) < 2) {
-            return $this->jsonResponse(['items' => []]);
-        }
+        $query  = trim((string) $request->getVar('q'));
+        $idParam = trim((string) $request->getVar('id'));
 
         $baseUrl = Environment::getEnv('SILVERVAULT_BASE_URL');
         if (empty($baseUrl)) {
             return $this->jsonError('SILVERVAULT_BASE_URL not configured', 500);
         }
 
-        $publicUrl    = rtrim($baseUrl, '/');
-        $resolvedUrl  = rtrim(SilvervaultFile::resolveSilvervaultUrl($baseUrl), '/');
-        $searchUrl    = $resolvedUrl . '/api/v1/MediaItem/search?' . http_build_query(['title' => $query]);
+        $publicUrl   = rtrim($baseUrl, '/');
+        $resolvedUrl = rtrim(SilvervaultFile::resolveSilvervaultUrl($baseUrl), '/');
+
+        // ID lookup: exact single result
+        if ($idParam !== '') {
+            return $this->fetchById($idParam, $resolvedUrl, $publicUrl);
+        }
+
+        if (strlen($query) < 2) {
+            return $this->jsonResponse(['items' => []]);
+        }
+
+        $searchUrl = $resolvedUrl . '/api/v1/MediaItem/search?' . http_build_query(['title' => $query]);
 
         try {
-            $token = Environment::getEnv('SILVERVAULT_TOKEN');
-
-            $options = [
-                'verify' => false,
-                'timeout' => 15,
-                'allow_redirects' => true,
-            ];
-
-            if (!empty($token)) {
-                $options['headers'] = [
-                    'Authorization' => 'Bearer ' . $token,
-                    'Accept' => 'application/json',
-                ];
-            } else {
-                $options['headers'] = ['Accept' => 'application/json'];
-            }
-
-            $client = new Client($options);
+            $client   = $this->buildClient();
             $response = $client->get($searchUrl);
 
             if ($response->getStatusCode() !== 200) {
                 return $this->jsonResponse(['items' => []]);
             }
 
-            $body = $response->getBody()->getContents();
-            $decoded = json_decode($body, true);
+            $decoded = json_decode($response->getBody()->getContents(), true);
 
             if (json_last_error() !== JSON_ERROR_NONE || !is_array($decoded)) {
                 return $this->jsonResponse(['items' => []]);
             }
 
             // Silvervault may return a plain array or a wrapped object.
-            // Unwrap if necessary.
             $rawItems = $decoded;
             if (isset($decoded['Items']) && is_array($decoded['Items'])) {
                 $rawItems = $decoded['Items'];
@@ -92,30 +80,72 @@ class SilvervaultSearchController extends Controller
                 $rawItems = $decoded['items'];
             }
 
-            $items = array_map(function (array $item) use ($resolvedUrl, $publicUrl): array {
-                $thumbnail = $item['Thumbnail'] ?? $item['thumbnail'] ?? '';
-                // The internal fetch URL (e.g. http://ddev-silvervault-web) gets embedded
-                // in asset URLs by SilverStripe's Director::absoluteURL(). Replace it
-                // with the public base URL so thumbnails load in the browser.
-                if ($resolvedUrl !== $publicUrl && $thumbnail) {
-                    $thumbnail = str_replace($resolvedUrl, $publicUrl, $thumbnail);
-                }
-                return [
-                    'silvervaultId' => (string) ($item['ID'] ?? $item['Id'] ?? $item['id'] ?? ''),
-                    'title'         => $item['Title'] ?? $item['title'] ?? '',
-                    'description'   => $item['Description'] ?? $item['description'] ?? '',
-                    'rightsinfo'    => $item['Rightsinfo'] ?? $item['rightsinfo'] ?? '',
-                    'thumbnail'     => $thumbnail,
-                ];
-            }, array_values($rawItems));
-
-            // Remove entries without an ID
+            $items = array_map(
+                fn(array $item) => $this->normalizeItem($item, $resolvedUrl, $publicUrl),
+                array_values($rawItems)
+            );
             $items = array_values(array_filter($items, fn($i) => $i['silvervaultId'] !== ''));
 
             return $this->jsonResponse(['items' => $items]);
         } catch (RequestException $e) {
             return $this->jsonResponse(['items' => []]);
         }
+    }
+
+    private function fetchById(string $id, string $resolvedUrl, string $publicUrl): HTTPResponse
+    {
+        try {
+            $client   = $this->buildClient();
+            $response = $client->get($resolvedUrl . '/api/v1/MediaItem/' . rawurlencode($id));
+
+            if ($response->getStatusCode() !== 200) {
+                return $this->jsonResponse(['items' => []]);
+            }
+
+            $decoded = json_decode($response->getBody()->getContents(), true);
+
+            if (json_last_error() !== JSON_ERROR_NONE || !is_array($decoded)) {
+                return $this->jsonResponse(['items' => []]);
+            }
+
+            $item = $this->normalizeItem($decoded, $resolvedUrl, $publicUrl);
+            $items = $item['silvervaultId'] !== '' ? [$item] : [];
+
+            return $this->jsonResponse(['items' => $items]);
+        } catch (RequestException $e) {
+            return $this->jsonResponse(['items' => []]);
+        }
+    }
+
+    private function buildClient(): Client
+    {
+        $token   = Environment::getEnv('SILVERVAULT_TOKEN');
+        $headers = ['Accept' => 'application/json'];
+        if (!empty($token)) {
+            $headers['Authorization'] = 'Bearer ' . $token;
+        }
+
+        return new Client([
+            'verify'          => false,
+            'timeout'         => 15,
+            'allow_redirects' => true,
+            'headers'         => $headers,
+        ]);
+    }
+
+    private function normalizeItem(array $item, string $resolvedUrl, string $publicUrl): array
+    {
+        $thumbnail = $item['Thumbnail'] ?? $item['thumbnail'] ?? '';
+        if ($resolvedUrl !== $publicUrl && $thumbnail) {
+            $thumbnail = str_replace($resolvedUrl, $publicUrl, $thumbnail);
+        }
+        return [
+            'silvervaultId' => (string) ($item['ID'] ?? $item['Id'] ?? $item['id'] ?? ''),
+            'title'         => $item['Title'] ?? $item['title'] ?? '',
+            'description'   => $item['Description'] ?? $item['description'] ?? '',
+            'rightsinfo'    => $item['Rightsinfo'] ?? $item['rightsinfo'] ?? '',
+            'thumbnail'     => $thumbnail,
+        ];
     }
 
     private function jsonResponse(array $data, int $status = 200): HTTPResponse
