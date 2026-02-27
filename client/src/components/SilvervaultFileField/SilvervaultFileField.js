@@ -236,15 +236,15 @@ const SilvervaultFileField = ({
 
             {/* Action buttons */}
             <div style={{ flexShrink: 0, display: 'flex', gap: '4px' }}>
-              <button
-                type="button"
+              <a
+                href={`${data.silvervaultBaseUrl || ''}/media/view/${selected.silvervaultId}`}
+                target="_blank"
+                rel="noreferrer"
                 className="btn btn-outline-secondary btn-sm"
-                onClick={handleOpenPopup}
-                disabled={disabled}
-                title="Ändern"
+                title="In Silvervault ansehen"
               >
-                Ändern
-              </button>
+                Info
+              </a>
               <button
                 type="button"
                 className="btn btn-outline-danger btn-sm"

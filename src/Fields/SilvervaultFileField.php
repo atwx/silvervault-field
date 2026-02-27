@@ -4,6 +4,7 @@ namespace Atwx\SilvervaultField\Fields;
 
 use Atwx\SilvervaultField\Models\SilvervaultFile;
 use SilverStripe\Control\Director;
+use SilverStripe\Core\Environment;
 use SilverStripe\Forms\FormField;
 use SilverStripe\ORM\DataObjectInterface;
 
@@ -79,6 +80,7 @@ class SilvervaultFileField extends FormField
     {
         $data = parent::getSchemaDataDefaults();
         $data['data']['searchEndpoint'] = Director::absoluteURL('api/silvervault/search');
+        $data['data']['silvervaultBaseUrl'] = rtrim((string) Environment::getEnv('SILVERVAULT_BASE_URL'), '/');
         return $data;
     }
 
