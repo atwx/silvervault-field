@@ -20,7 +20,7 @@ function parseValue(rawValue) {
   }
 }
 
-function buildJsonValue(selected, caption, altText) {
+function buildJsonValue(selected, caption, altText, rightsOverride) {
   if (!selected || !selected.silvervaultId) return '';
   return JSON.stringify({
     silvervaultId: selected.silvervaultId,
@@ -30,6 +30,7 @@ function buildJsonValue(selected, caption, altText) {
     thumbnail: selected.thumbnail || '',
     caption,
     altText,
+    rightsOverride,
   });
 }
 
@@ -49,6 +50,7 @@ const SilvervaultFileField = ({
   const [selected, setSelected] = useState(initialFile);
   const [caption, setCaption] = useState(initialFile ? initialFile.caption || '' : '');
   const [altText, setAltText] = useState(initialFile ? initialFile.altText || '' : '');
+  const [rightsOverride, setRightsOverride] = useState(initialFile ? initialFile.rightsOverride || '' : '');
   const [popupOpen, setPopupOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
@@ -98,26 +100,34 @@ const SilvervaultFileField = ({
   const handleSelect = (item) => {
     const newCaption = item.caption || '';
     const newAltText = '';
+    const newRightsOverride = '';
     setSelected(item);
     setCaption(newCaption);
     setAltText(newAltText);
+    setRightsOverride(newRightsOverride);
     setPopupOpen(false);
     setSearchQuery('');
     setSearchResults([]);
     setNoResults(false);
-    onChange(buildJsonValue(item, newCaption, newAltText));
+    onChange(buildJsonValue(item, newCaption, newAltText, newRightsOverride));
   };
 
   const handleCaptionChange = (e) => {
     const val = e.target.value;
     setCaption(val);
-    onChange(buildJsonValue(selected, val, altText));
+    onChange(buildJsonValue(selected, val, altText, rightsOverride));
   };
 
   const handleAltTextChange = (e) => {
     const val = e.target.value;
     setAltText(val);
-    onChange(buildJsonValue(selected, caption, val));
+    onChange(buildJsonValue(selected, caption, val, rightsOverride));
+  };
+
+  const handleRightsOverrideChange = (e) => {
+    const val = e.target.value;
+    setRightsOverride(val);
+    onChange(buildJsonValue(selected, caption, altText, val));
   };
 
   const handleOpenPopup = () => {
@@ -138,6 +148,7 @@ const SilvervaultFileField = ({
     setSelected(null);
     setCaption('');
     setAltText('');
+    setRightsOverride('');
     onChange('');
   };
 
@@ -171,7 +182,7 @@ const SilvervaultFileField = ({
 
   return (
     <div className="silvervault-file-field">
-      <input type="hidden" name={name} id={id} value={buildJsonValue(selected, caption, altText)} readOnly />
+      <input type="hidden" name={name} id={id} value={buildJsonValue(selected, caption, altText, rightsOverride)} readOnly />
 
       {/* ── Empty state: just a button ── */}
       {!selected && (
@@ -288,6 +299,23 @@ const SilvervaultFileField = ({
                   value={altText}
                   placeholder={selected.title || ''}
                   onChange={handleAltTextChange}
+                  disabled={disabled}
+                />
+              </div>
+            </div>
+
+            <div className="form-group">
+              <label htmlFor={`${id}_rightsoverride`} className="form__field-label">
+                Quelle
+              </label>
+              <div className="form__field-holder">
+                <input
+                  type="text"
+                  id={`${id}_rightsoverride`}
+                  className="form-control"
+                  value={rightsOverride}
+                  placeholder={selected.rightsinfo || ''}
+                  onChange={handleRightsOverrideChange}
                   disabled={disabled}
                 />
               </div>

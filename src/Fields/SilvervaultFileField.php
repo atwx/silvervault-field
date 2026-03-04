@@ -71,6 +71,7 @@ class SilvervaultFileField extends FormField
         $silvervaultFile->ThumbnailURL    = $data['thumbnail'] ?? '';
         $silvervaultFile->Caption         = $data['caption'] ?? '';
         $silvervaultFile->AltText         = $data['altText'] ?? '';
+        $silvervaultFile->RightsOverride  = $data['rightsOverride'] ?? '';
         $silvervaultFile->write();
 
         $record->{$fieldName . 'ID'} = $silvervaultFile->ID;
@@ -122,6 +123,7 @@ class SilvervaultFileField extends FormField
             'thumbnail'     => $file->ThumbnailURL,
             'caption'       => $file->Caption,
             'altText'       => $file->AltText,
+            'rightsOverride' => $file->RightsOverride,
         ]);
     }
 }

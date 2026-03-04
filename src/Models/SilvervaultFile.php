@@ -21,6 +21,7 @@ class SilvervaultFile extends DataObject
         'ThumbnailURL' => 'Varchar(512)',
         'Caption' => 'Text',
         'AltText' => 'Varchar(255)',
+        'RightsOverride' => 'Text',
     ];
 
     private static $field_labels = [
@@ -31,6 +32,7 @@ class SilvervaultFile extends DataObject
         'ThumbnailURL' => 'Vorschaubild URL',
         'Caption' => 'Bildunterschrift',
         'AltText' => 'Alt-Text',
+        'RightsOverride' => 'Quelle',
     ];
 
     private static $casting = [
@@ -167,6 +169,11 @@ class SilvervaultFile extends DataObject
     public function getEffectiveCaption(): string
     {
         return $this->Caption ?: $this->Title ?: '';
+    }
+
+    public function getEffectiveRightsinfo(): string
+    {
+        return $this->RightsOverride ?: $this->Rightsinfo ?: '';
     }
 
     public function FitMax(int $width, int $height): ?SilvervaultScaledImage
