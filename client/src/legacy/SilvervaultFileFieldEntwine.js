@@ -9,14 +9,12 @@ window.jQuery.entwine('ss', ($) => {
     Component: null,
 
     onmatch() {
-      const cmsContent = this.closest('.cms-content').attr('id');
-      const context = cmsContent ? { context: cmsContent } : {};
       const schema = this.data('schema');
       const state = this.data('state');
       if (schema) {
         this.data('entwine-value', (state && state.value) ? state.value : '');
         const Root = createRoot(this[0]);
-        const ReactField = loadComponent(schema.component, context);
+        const ReactField = loadComponent(schema.component);
         this.setRoot(Root);
         this.setComponent(ReactField);
         this._super();
@@ -50,18 +48,5 @@ window.jQuery.entwine('ss', ($) => {
       this.data('entwine-value', value);
       this.refresh();
     },
-  });
-
-  $('.cms-edit-form').entwine({
-    getChangeTrackerOptions() {
-      const isDefault = (this.entwineData('ChangeTrackerOptions') === undefined);
-      let opts = this._super();
-      if (isDefault) {
-        opts = $.extend({}, opts);
-        opts.ignoreFieldSelector += ', .silvervault-file-field .no-change-track :input';
-        this.setChangeTrackerOptions(opts);
-      }
-      return opts;
-    }
   });
 });
