@@ -86,6 +86,8 @@ const SilvervaultFileField = ({ title, value, data, onChange }) => {
     const modalData = {
       formEndpoint: searchFormEndpoint,
       searchEndpoint,
+      autoSearch: true,
+      initialQuery: selected ? (selected.title || '') : '',
     };
 
     let portal = document.getElementById('cms-modal-portal');

@@ -22,6 +22,11 @@ class SilvervaultSearchHandler extends CmsPopupSearchHandler
         ]);
     }
 
+    public function getMinQueryLength(): int
+    {
+        return 0;
+    }
+
     public function search(string $query, HTTPRequest $request): string
     {
         $baseUrl = Environment::getEnv('SILVERVAULT_BASE_URL');
