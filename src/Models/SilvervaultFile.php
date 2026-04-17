@@ -4,7 +4,7 @@ namespace Atwx\SilvervaultField\Models;
 
 use Atwx\SilvervaultField\Services\UrlSigningService;
 use GuzzleHttp\Client;
-use GuzzleHttp\Exception\RequestException;
+use GuzzleHttp\Exception\TransferException;
 use SilverStripe\Core\Environment;
 use SilverStripe\ORM\DataObject;
 
@@ -50,8 +50,8 @@ class SilvervaultFile extends DataObject
     {
         parent::onBeforeWrite();
 
-        // Check if the SilvervaultID has changed
-        if ($this->isChanged('SilvervaultID') && !empty($this->SilvervaultID)) {
+        // Check if the SilvervaultID value actually changed (not just touched)
+        if ($this->isChanged('SilvervaultID', self::CHANGE_VALUE) && !empty($this->SilvervaultID)) {
             $jsonData = $this->fetchSilvervaultData($this->SilvervaultID);
             $this->Data = $jsonData;
 
@@ -108,7 +108,7 @@ class SilvervaultFile extends DataObject
             if ($response->getStatusCode() === 200) {
                 return $response->getBody()->getContents();
             }
-        } catch (RequestException $e) {
+        } catch (TransferException $e) {
             return null;
         }
 

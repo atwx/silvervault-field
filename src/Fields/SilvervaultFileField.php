@@ -69,7 +69,10 @@ class SilvervaultFileField extends FormField
         $silvervaultFile->Caption = $data['caption'] ?? '';
         $silvervaultFile->AltText = $data['altText'] ?? '';
         $silvervaultFile->RightsOverride = $data['rightsOverride'] ?? '';
-        $silvervaultFile->write();
+
+        if (!$silvervaultFile->isInDB() || $silvervaultFile->isChanged()) {
+            $silvervaultFile->write();
+        }
 
         $record->{$fieldName . 'ID'} = $silvervaultFile->ID;
     }
