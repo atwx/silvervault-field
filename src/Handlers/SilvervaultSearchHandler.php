@@ -2,7 +2,7 @@
 
 namespace Atwx\SilvervaultField\Handlers;
 
-use Atwx\CmsPopup\Handler\CmsPopupSearchHandler;
+use S2Hub\CmsPopup\Handler\CmsPopupSearchHandler;
 use Atwx\SilvervaultField\Models\SilvervaultFile;
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\RequestException;

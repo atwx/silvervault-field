@@ -2,7 +2,7 @@
 
 namespace Atwx\SilvervaultField\Fields;
 
-use Atwx\CmsPopup\Control\CmsPopupSearchRouterController;
+use S2Hub\CmsPopup\Control\CmsPopupSearchRouterController;
 use Atwx\SilvervaultField\Handlers\SilvervaultSearchHandler;
 use Atwx\SilvervaultField\Models\SilvervaultFile;
 use SilverStripe\Core\Environment;
