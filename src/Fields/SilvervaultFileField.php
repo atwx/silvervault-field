@@ -153,10 +153,10 @@ class SilvervaultFileField extends FormField
     public function getModalDataJSON(): string
     {
         $endpoints = $this->getSearchEndpoints();
-        return htmlspecialchars((string) json_encode([
+        return (string) json_encode([
             'formEndpoint' => $endpoints['searchForm'],
             'searchEndpoint' => $endpoints['searchResults'],
-        ]), ENT_QUOTES, 'UTF-8');
+        ]);
     }
 
     /**
