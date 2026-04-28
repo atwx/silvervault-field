@@ -4,49 +4,44 @@ import { createRoot } from 'react-dom/client';
 import { loadComponent } from 'lib/Injector';
 
 window.jQuery.entwine('ss', ($) => {
-  $('.js-injector-boot .silvervault-file-field').entwine({
+  $('.js-silvervault-mount').entwine({
     Root: null,
-    Component: null,
 
     onmatch() {
-      const schema = this.data('schema');
-      const state = this.data('state');
-      if (schema) {
-        this.data('entwine-value', (state && state.value) ? state.value : '');
-        const Root = createRoot(this[0]);
-        const ReactField = loadComponent(schema.component);
-        this.setRoot(Root);
-        this.setComponent(ReactField);
-        this._super();
-        this.refresh();
+      let config = {};
+      try {
+        config = JSON.parse(this.attr('data-config') || '{}');
+      } catch (e) {
+        config = {};
       }
+      const value = this.attr('data-value') || '';
+      const name = this.attr('data-name') || '';
+
+      const ReactField = loadComponent('SilvervaultFileField');
+      if (!ReactField) {
+        return;
+      }
+
+      const Root = createRoot(this[0]);
+      this.setRoot(Root);
+      this._super();
+
+      Root.render(
+        <ReactField
+          title=""
+          hiddenInputName={name}
+          value={value}
+          data={config}
+        />
+      );
     },
 
     onunmatch() {
       const Root = this.getRoot();
       if (Root) {
         Root.unmount();
+        this.setRoot(null);
       }
-    },
-
-    getProps() {
-      return {
-        ...this.data('schema'),
-        value: this.data('entwine-value') || '',
-        onChange: this.handleChange.bind(this),
-      };
-    },
-
-    refresh() {
-      const Root = this.getRoot();
-      const ReactField = this.getComponent();
-      const props = this.getProps();
-      Root.render(<ReactField {...props} noHolder />);
-    },
-
-    handleChange(value) {
-      this.data('entwine-value', value);
-      this.refresh();
     },
   });
 });

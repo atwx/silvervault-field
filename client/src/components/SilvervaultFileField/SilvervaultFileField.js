@@ -3,7 +3,7 @@ import ReactDOM from 'react-dom';
 import PropTypes from 'prop-types';
 import { loadComponent } from 'lib/Injector';
 
-const SilvervaultFileField = ({ title, value, data, onChange }) => {
+const SilvervaultFileField = ({ title, hiddenInputName, value, data, onChange }) => {
   const { searchFormEndpoint, searchEndpoint, silvervaultBaseUrl, vaultFile } = data || {};
 
   const parseValue = (val) => {
@@ -113,8 +113,22 @@ const SilvervaultFileField = ({ title, value, data, onChange }) => {
     );
   };
 
+  const hiddenValue = selected
+    ? JSON.stringify({
+      silvervaultId: selected.silvervaultId,
+      title: selected.title || '',
+      description: selected.description || '',
+      rightsinfo: selected.rightsinfo || '',
+      thumbnail: selected.thumbnail || '',
+      caption,
+      altText,
+      rightsOverride,
+    })
+    : '';
+
   return (
     <div className="silvervault-file-field">
+      {hiddenInputName && <input type="hidden" name={hiddenInputName} value={hiddenValue} readOnly />}
       {title && (
         <label className="form-label" style={{ fontWeight: 600, display: 'block', marginBottom: '8px' }}>
           {title}
@@ -218,6 +232,7 @@ const SilvervaultFileField = ({ title, value, data, onChange }) => {
 
 SilvervaultFileField.propTypes = {
   title: PropTypes.string,
+  hiddenInputName: PropTypes.string,
   value: PropTypes.string,
   data: PropTypes.shape({
     searchFormEndpoint: PropTypes.string,
@@ -230,6 +245,7 @@ SilvervaultFileField.propTypes = {
 
 SilvervaultFileField.defaultProps = {
   title: '',
+  hiddenInputName: '',
   value: '',
   data: {},
   onChange: () => {},
